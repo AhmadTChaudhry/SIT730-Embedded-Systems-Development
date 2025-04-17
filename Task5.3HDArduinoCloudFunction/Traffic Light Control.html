@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Light Control Panel</title>
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.19.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.19.1/firebase-database-compat.min.js"></script>
+    <style>
+        :root {
+            --light-off-color: #444;
+            --red-on-color: #f00;
+            --yellow-on-color: #ff0;
+            --green-on-color: #0f0;
+            --red-bg-color: rgba(255, 0, 0, 0.05);
+            --yellow-bg-color: rgba(255, 255, 0, 0.08);
+            --green-bg-color: rgba(0, 255, 0, 0.05);
+            --border-color: #ddd;
+            --button-bg: #007bff;
+            --button-hover-bg: #0056b3;
+            --timer-button-bg: #17a2b8;
+            --timer-button-hover-bg: #117a8b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+    
+
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+
+        .control-panel-column {
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .traffic-light-column {
+            flex-basis: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 20px;
+        }
+
+        .traffic-light-visual {
+            background-color: #222;
+            padding: 15px 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 80px;
+        }
+
+        .light {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--light-off-color);
+            border: 2px solid #555;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .light.red-on {
+            background-color: var(--red-on-color);
+            box-shadow: 0 0 15px 5px var(--red-on-color);
+        }
+
+        .light.yellow-on {
+            background-color: var(--yellow-on-color);
+            box-shadow: 0 0 15px 5px var(--yellow-on-color);
+        }
+
+        .light.green-on {
+            background-color: var(--green-on-color);
+            box-shadow: 0 0 15px 5px var(--green-on-color);
+        }
+
+        .control-panel {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .light-control {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #red-control {
+            background-color: var(--red-bg-color);
+        }
+
+        #green-control {
+            background-color: var(--green-bg-color);
+        }
+
+        #yellow-control {
+            background-color: var(--yellow-bg-color);
+        }
+
+        .light-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .timer-control {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            padding: 8px 10px;
+            width: 60px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        button {
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.95em;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+            flex-grow: 1;
+        }
+
+        .toggle-btn {
+            background-color: var(--button-bg);
+        }
+
+        .toggle-btn:hover {
+            background-color: var(--button-hover-bg);
+        }
+
+        .timer-btn {
+            background-color: var(--timer-button-bg);
+            flex-grow: 0;
+        }
+
+        .timer-btn:hover {
+            background-color: var(--timer-button-hover-bg);
+        }
+
+        @media (max-width: 600px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .traffic-light-column {
+                order: -1;
+                padding-top: 0;
+                margin-bottom: 20px;
+                flex-basis: auto;
+                width: auto;
+            }
+
+            .control-panel-column {
+                width: 100%;
+                max-width: 500px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .timer-control {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            input[type="number"] {
+                width: auto;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Remote Traffic Light Control</h1>
+    <h2 style="text-align: center;">Ahmad Chaudhry s224227027</h2>
+    <hr style="border: 1px solid #ddd; margin: 20px auto; width: 80%; max-width: 800px;">
+
+    <div class="main-container">
+        <div class="control-panel-column">
+            <div class="control-panel">
+                <div class="light-control" id="red-control">
+                    <div class="light-header">
+                        <h2>Red Light</h2>
+                    </div>
+                    <button class="toggle-btn" id="red-toggle">Toggle Red Light</button>
+                    <div class="timer-control">
+                        <label for="red-timer">Timer (s):</label>
+                        <input type="number" id="red-timer" min="0" max="3600" value="10">
+                        <button class="timer-btn" id="red-timer-btn">Set Timer</button>
+                    </div>
+                </div>
+
+                <div class="light-control" id="yellow-control">
+                    <div class="light-header">
+                        <h2>Yellow Light</h2>
+                    </div>
+                    <button class="toggle-btn" id="yellow-toggle">Toggle Yellow Light</button>
+                    <div class="timer-control">
+                        <label for="yellow-timer">Timer (s):</label>
+                        <input type="number" id="yellow-timer" min="0" max="3600" value="5">
+                        <button class="timer-btn" id="yellow-timer-btn">Set Timer</button>
+                    </div>
+                </div>
+
+                <div class="light-control" id="green-control">
+                    <div class="light-header">
+                        <h2>Green Light</h2>
+                    </div>
+                    <button class="toggle-btn" id="green-toggle">Toggle Green Light</button>
+                    <div class="timer-control">
+                        <label for="green-timer">Timer (s):</label>
+                        <input type="number" id="green-timer" min="0" max="3600" value="10">
+                        <button class="timer-btn" id="green-timer-btn">Set Timer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="traffic-light-column">
+            <div class="traffic-light-visual">
+                <div class="light" id="red-light-visual"></div>
+                <div class="light" id="yellow-light-visual"></div>
+                <div class="light" id="green-light-visual"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyChXoOEIn9MPOBFl8gnKwRtVxILh9H0xEo",
+            authDomain: "traffic-light-rpi.firebaseapp.com",
+            databaseURL: "https://traffic-light-rpi-default-rtdb.firebaseio.com",
+            projectId: "traffic-light-rpi",
+            storageBucket: "traffic-light-rpi.firebasestorage.app",
+            messagingSenderId: "1094366424302",
+            appId: "1:1094366424302:web:64f8dc9df3dc25d1ec17ff"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const lightsRef = database.ref('trafficLights');
+        const redRef = database.ref('trafficLights/red');
+        const greenRef = database.ref('trafficLights/green');
+        const yellowRef = database.ref('trafficLights/yellow');
+
+        const redToggle = document.getElementById('red-toggle');
+        const greenToggle = document.getElementById('green-toggle');
+        const yellowToggle = document.getElementById('yellow-toggle');
+        const redTimerBtn = document.getElementById('red-timer-btn');
+        const greenTimerBtn = document.getElementById('green-timer-btn');
+        const yellowTimerBtn = document.getElementById('yellow-timer-btn');
+        const redTimerInput = document.getElementById('red-timer');
+        const greenTimerInput = document.getElementById('green-timer');
+        const yellowTimerInput = document.getElementById('yellow-timer');
+
+        const redLightVisual = document.getElementById('red-light-visual');
+        const yellowLightVisual = document.getElementById('yellow-light-visual');
+        const greenLightVisual = document.getElementById('green-light-visual');
+
+        const activeTimers = {
+            red: null,
+            green: null,
+            yellow: null
+        };
+
+        function clearAllTimers() {
+            for (const lightName in activeTimers) {
+                if (activeTimers[lightName]) {
+                    clearTimeout(activeTimers[lightName]);
+                    activeTimers[lightName] = null;
+                    console.log(`Cleared active timer for ${lightName}`);
+                }
+            }
+        }
+
+        function setLightState(targetLightName, newState) {
+            clearAllTimers();
+
+            const updates = {};
+            const lights = ['red', 'green', 'yellow'];
+
+            lights.forEach(lightName => {
+                const state = (lightName === targetLightName) ? newState : (newState ? false : undefined);
+                if (state !== undefined) {
+                    updates[`${lightName}/state`] = state;
+                    updates[`${lightName}/timer`] = 0;
+                }
+            });
+
+            console.log(`Setting state: ${targetLightName} to ${newState}, others off. Updates:`, updates);
+            lightsRef.update(updates).catch(error => {
+                console.error(`Firebase update failed for setLightState: `, error);
+            });
+        }
+
+        function setLightWithTimer(targetLightName, timerValueSeconds) {
+            clearAllTimers();
+
+            if (timerValueSeconds <= 0) {
+                console.log(`Timer value for ${targetLightName} is ${timerValueSeconds}. Turning ON indefinitely.`);
+                setLightState(targetLightName, true);
+                return;
+            }
+
+            console.log(`Setting ${targetLightName} ON for ${timerValueSeconds} seconds.`);
+
+            const updates = {};
+            const lights = ['red', 'green', 'yellow'];
+
+            lights.forEach(lightName => {
+                updates[`${lightName}/state`] = (lightName === targetLightName);
+                updates[`${lightName}/timer`] = (lightName === targetLightName) ? timerValueSeconds : 0;
+            });
+
+            console.log(`Setting timer: ${targetLightName} for ${timerValueSeconds}s. Updates:`, updates);
+
+            lightsRef.update(updates).then(() => {
+                console.log(`${targetLightName} state set to true with timer in Firebase.`);
+                const timerId = setTimeout(() => {
+                    console.log(`Timer expired for ${targetLightName}. Turning OFF.`);
+                    database.ref(`trafficLights/${targetLightName}`).update({
+                        state: false,
+                        timer: 0
+                    });
+                    activeTimers[targetLightName] = null;
+                }, timerValueSeconds * 1000);
+
+                activeTimers[targetLightName] = timerId;
+
+            }).catch(error => {
+                console.error(`Firebase write failed for ${targetLightName} timer: `, error);
+            });
+        }
+
+        redToggle.addEventListener('click', () => {
+            redRef.child('state').once('value', snapshot => {
+                const currentState = snapshot.val() || false;
+                setLightState('red', !currentState);
+            });
+        });
+
+        greenToggle.addEventListener('click', () => {
+            greenRef.child('state').once('value', snapshot => {
+                const currentState = snapshot.val() || false;
+                setLightState('green', !currentState);
+            });
+        });
+
+        yellowToggle.addEventListener('click', () => {
+            yellowRef.child('state').once('value', snapshot => {
+                const currentState = snapshot.val() || false;
+                setLightState('yellow', !currentState);
+            });
+        });
+
+        redTimerBtn.addEventListener('click', () => {
+            const timerValue = parseInt(redTimerInput.value);
+            setLightWithTimer('red', timerValue);
+        });
+
+        greenTimerBtn.addEventListener('click', () => {
+            const timerValue = parseInt(greenTimerInput.value);
+            setLightWithTimer('green', timerValue);
+        });
+
+        yellowTimerBtn.addEventListener('click', () => {
+            const timerValue = parseInt(yellowTimerInput.value);
+            setLightWithTimer('yellow', timerValue);
+        });
+
+        function setupVisualListener(lightRef, visualElement, onClassName) {
+            lightRef.child('state').on('value', snapshot => {
+                const isOn = snapshot.val() || false;
+                if (isOn) {
+                    visualElement.classList.add(onClassName);
+                } else {
+                    visualElement.classList.remove(onClassName);
+                }
+                console.log(`Visual updated for ${visualElement.id}. State: ${isOn}`);
+            }, error => {
+                console.error(`Firebase listener error for ${visualElement.id}: `, error);
+                visualElement.style.borderColor = 'orange';
+            });
+        }
+
+        setupVisualListener(redRef, redLightVisual, 'red-on');
+        setupVisualListener(greenRef, greenLightVisual, 'green-on');
+        setupVisualListener(yellowRef, yellowLightVisual, 'yellow-on');
+    </script>
+</body>
+
+</html>
